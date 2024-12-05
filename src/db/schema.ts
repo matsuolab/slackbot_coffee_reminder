@@ -3,10 +3,29 @@ import { CoffeeMachineState } from '../types';
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
-  process.env.SUPABASE_ANON_KEY!
+  process.env.SUPABASE_ANON_KEY!,
+  {
+    auth: {
+      persistSession: false
+    },
+    db: {
+      schema: 'public'
+    }
+  }
 );
 
+let stateCache: {
+  data: CoffeeMachineState;
+  timestamp: number;
+} | null = null;
+
+const CACHE_TTL = 30000; // 30秒
+
 export const getCurrentState = async (): Promise<CoffeeMachineState> => {
+  if (stateCache && Date.now() - stateCache.timestamp < CACHE_TTL) {
+    return stateCache.data;
+  }
+
   try {
     const { data, error } = await supabase
       .from('machine_state')
@@ -15,7 +34,7 @@ export const getCurrentState = async (): Promise<CoffeeMachineState> => {
       .limit(1)
       .single();
 
-    return {
+    const state = {
       isRunning: data?.is_running ?? false,
       startedBy: data?.started_by ?? null,
       startedAt: data?.started_at ?? null,
@@ -23,6 +42,13 @@ export const getCurrentState = async (): Promise<CoffeeMachineState> => {
       stoppedBy: data?.stopped_by ?? null,
       stoppedAt: data?.stopped_at ?? null
     };
+
+    stateCache = {
+      data: state,
+      timestamp: Date.now()
+    };
+
+    return state;
   } catch (error) {
     console.error('Error in getCurrentState:', error);
     return {

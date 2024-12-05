@@ -3,10 +3,22 @@
   "builds": [
     {
       "src": "src/app.ts",
-      "use": "@vercel/node"
+      "use": "@vercel/node",
+      "config": {
+        "maxDuration": 10,
+        "memory": 1024
+      }
     }
   ],
   "routes": [
+    {
+      "src": "/slack/events",
+      "dest": "src/app.ts",
+      "methods": ["POST"],
+      "headers": {
+        "Cache-Control": "no-cache"
+      }
+    },
     {
       "src": "/check-notifications",
       "dest": "src/app.ts",
@@ -16,11 +28,6 @@
       "src": "/api/health",
       "dest": "src/app.ts",
       "methods": ["GET"]
-    },
-    {
-      "src": "/slack/events",
-      "dest": "src/app.ts",
-      "methods": ["POST"]
     },
     {
       "src": "/(.*)",

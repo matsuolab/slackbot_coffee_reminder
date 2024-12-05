@@ -293,3 +293,12 @@ const handleOnCommand = async (userId: string, client: any, triggerId: string) =
 
   // Vercel用のエクスポート
   module.exports = receiver.app;
+
+  app.message('ping', async ({ say }) => {
+    await say('pong');
+  });
+
+  // 定期的なウォームアップ用エンドポイント
+  app.receiver.router.get('/warmup', (req, res) => {
+    res.send('OK');
+  });
