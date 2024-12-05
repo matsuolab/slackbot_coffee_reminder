@@ -15,8 +15,6 @@ export const getCurrentState = async (): Promise<CoffeeMachineState> => {
       .limit(1)
       .single();
 
-    console.log('Supabase response:', { data, error });
-
     return {
       isRunning: data?.is_running ?? false,
       startedBy: data?.started_by ?? null,

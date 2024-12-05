@@ -1,5 +1,3 @@
-import { TimeOption } from '../types';
-
 export const generateHourOptions = (currentTime: Date): number[] => {
     const current = new Date(currentTime);
     const currentHour = current.getHours();
