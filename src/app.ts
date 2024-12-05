@@ -311,3 +311,21 @@ const handleOnCommand = async (userId: string, client: any, triggerId: string) =
   receiver.router.get('/warmup', (req, res) => {
     res.send('OK');
   });
+
+  // 30分ごとに通知をチェック
+  const notificationJob = new CronJob(
+    '*/30 * * * *',  // 30分ごと
+    async () => {
+      try {
+        await checkAndNotify(app.client.chat.postMessage);
+      } catch (error) {
+        console.error('Notification check error:', error);
+      }
+    },
+    null,
+    true,
+    'Asia/Tokyo'
+  );
+
+  // サーバー起動時にcronジョブを開始
+  notificationJob.start();
