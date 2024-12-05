@@ -1,266 +1,48 @@
 import 'dotenv/config';
-import { App, ExpressReceiver } from '@slack/bolt';
+import { App } from '@slack/bolt';
+import express from 'express';
 import { generateHourOptions, generateMinuteOptions } from './utils/timeUtils';
 import { getCurrentState, updateState, logAction } from './db/schema';
-import { CronJob } from 'cron';
 import { checkAndNotify } from './utils/notifications';
 import dotenv from 'dotenv';
 dotenv.config();
 
-// ExpressReceiverを作成
-const receiver = new ExpressReceiver({
-  signingSecret: process.env.SLACK_SIGNING_SECRET!,
-  endpoints: '/slack/events',  // Slackからのリクエストを受け付けるエンドポイント
+// Express appを作成
+const expressApp = express();
+expressApp.use(express.json());
+expressApp.use(express.urlencoded({ extended: true }));
+
+// デバッグ用のログミドルウェア
+expressApp.use((req, res, next) => {
+  console.log('Request Body:', req.body);
+  next();
 });
 
+// Slackの検証エンドポイント
+expressApp.post('/slack/events', (req, res) => {
+  console.log('Received request:', req.body);
+  
+  if (req.body && req.body.type === 'url_verification') {
+    const challenge = req.body.challenge;
+    console.log('Sending challenge response:', challenge);
+    return res.status(200).json({
+      challenge: challenge
+    });
+  }
+  
+  return res.sendStatus(200);
+});
+
+// サーバーの起動
+const server = expressApp.listen(process.env.PORT || 3000, () => {
+  console.log('⚡️ Express server is running');
+});
+
+// Boltアプリの設定は一時的にコメントアウト
+/*
 const app = new App({
   token: process.env.SLACK_BOT_TOKEN,
-  receiver
+  signingSecret: process.env.SLACK_SIGNING_SECRET,
+  // ... 他の設定
 });
-
-// ルートパスへのリクエストに対するハンドラ
-receiver.router.post('/', (req, res) => {
-  res.status(200).send('OK');
-});
-
-receiver.router.post('/check-notifications', async (req, res) => {
-  try {
-    await checkAndNotify(app.client.chat.postMessage.bind(app.client.chat));
-    res.status(200).send('OK');
-  } catch (error) {
-    console.error('Notification check error:', error);
-    res.status(500).send('Error');
-  }
-});
-
-app.command('/barista', async ({ command, ack, client, say }) => {
-  await ack();
-
-  const [action] = command.text.split(' ');
-
-  switch (action) {
-    case 'on':
-      await handleOnCommand(command.user_id, client, command.trigger_id);
-      break;
-    case 'off':
-      await handleOffCommand(command.user_id, client);
-      break;
-    case 'status':
-      await handleStatusCommand(say);
-      break;
-    case 'help':
-      await handleHelpCommand(say);
-      break;
-    default:
-      await client.chat.postMessage({
-        channel: command.user_id,
-        text: '無効なコマンドです。'
-      });
-  }
-});
-
-const handleOnCommand = async (userId: string, client: any, triggerId: string) => {
-  const currentState = await getCurrentState();
-  if (currentState.isRunning) {
-    await client.chat.postMessage({
-      channel: userId,
-      text: 'すでにマシンは起動しています。'
-    });
-    return;
-  }
-
-  const currentTime = new Date();
-  const hours = generateHourOptions(currentTime);
-  const minutes = generateMinuteOptions();
-
-  try {
-    await client.views.open({
-      trigger_id: triggerId,
-      view: {
-        type: 'modal',
-        callback_id: 'coffee_time_selection',
-        title: {
-          type: 'plain_text',
-          text: '片付け時間の選択'
-        },
-        blocks: [
-          {
-            type: 'section',
-            text: {
-              type: 'mrkdwn',
-              text: '片付ける時間を選択してください：'
-            }
-          },
-          {
-            type: 'actions',
-            block_id: 'time_select_block',
-            elements: [
-              {
-                type: 'static_select',
-                action_id: 'hour_select',
-                placeholder: {
-                  type: 'plain_text',
-                  text: '時間を選択'
-                },
-                initial_option: {
-                  text: {
-                    type: 'plain_text',
-                    text: '15時'
-                  },
-                  value: '15'
-                },
-                options: hours.map(hour => ({
-                  text: {
-                    type: 'plain_text',
-                    text: `${hour}時`
-                  },
-                  value: hour.toString()
-                }))
-              },
-              {
-                type: 'static_select',
-                action_id: 'minute_select',
-                placeholder: {
-                  type: 'plain_text',
-                  text: '分を選択'
-                },
-                initial_option: {
-                  text: {
-                    type: 'plain_text',
-                    text: '00分'
-                  },
-                  value: '00'
-                },
-                options: minutes.map(minute => ({
-                  text: {
-                    type: 'plain_text',
-                    text: `${minute.toString().padStart(2, '0')}分`
-                  },
-                  value: minute.toString().padStart(2, '0')
-                }))
-              }
-            ]
-          }
-        ],
-        submit: {
-          type: 'plain_text',
-          text: '確定'
-        }
-      }
-    });
-  } catch (error) {
-    console.error('Error opening modal:', error);
-    await client.chat.postMessage({
-      channel: userId,
-      text: 'エラーが発生しました。もう一度お試しください。'
-    });
-  }
-};
-
-const handleOffCommand = async (userId: string, client: any) => {
-  const currentState = await getCurrentState();
-  if (!currentState.isRunning) {
-    await client.chat.postMessage({
-      channel: userId,
-      text: 'すでにマシンはしまっています。'
-    });
-    return;
-  }
-
-  const stoppedAt = new Date().toISOString();
-  
-  await updateState({
-    isRunning: false,
-    startedBy: null,
-    startedAt: null,
-    cleanupTime: null,
-    stoppedBy: userId,
-    stoppedAt: stoppedAt
-  });
-
-  await logAction('STOP', userId, currentState.cleanupTime || '');
-  
-  if (!process.env.SLACK_CHANNEL_ID) {
-    throw new Error('SLACK_CHANNEL_ID is not defined');
-  }
-  
-  await client.chat.postMessage({
-    channel: process.env.SLACK_CHANNEL_ID,
-    text: `<@${userId}>さんがマシンをしめました。おつかれさまでした！`
-  });
-};
-
-const handleStatusCommand = async (say: Function) => {
-  const currentState = await getCurrentState();
-  if (currentState.isRunning) {
-    const startTime = new Date(currentState.startedAt!).toLocaleTimeString('ja-JP', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-    await say(`マシンは起動中です。開けた時刻: ${startTime}、しめる時刻: ${currentState.cleanupTime}、開けた人: <@${currentState.startedBy}>さん`);
-  } else {
-    if (currentState.stoppedAt && currentState.stoppedBy) {
-      const stoppedTime = new Date(currentState.stoppedAt).toLocaleTimeString('ja-JP', {
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-      await say(`マシンは停止しています。しめた時刻: ${stoppedTime}、しめた人: <@${currentState.stoppedBy}>さん`);
-    } else {
-      await say('マシンは停止しています。');
-    }
-  }
-};
-
-const handleHelpCommand = async (say: Function) => {
-  await say('使用可能なコマンド:\n/barista on - マシンをあけるとき使う\n/barista off - マシンをしめるとき使う\n/barista status - マシンの起動状態・開けた人・しめた人を確認できる\n/barista help - このヘルプメッセージを表示');
-};
-
-// 時間選択のハンドラ
-app.view('coffee_time_selection', async ({ ack, body, view, client }) => {
-  await ack();
-  
-  try {
-    const hourValue = view.state.values.time_select_block.hour_select.selected_option?.value;
-    const minuteValue = view.state.values.time_select_block.minute_select.selected_option?.value;
-    const userId = body.user.id;
-
-    if (!hourValue || !minuteValue) {
-      throw new Error('時間が選択されていません');
-    }
-
-    const selectedTime = `${hourValue.padStart(2, '0')}:${minuteValue}`;
-
-    await updateState({
-      isRunning: true,
-      startedBy: userId,
-      startedAt: new Date().toISOString(),
-      cleanupTime: selectedTime,
-      stoppedBy: null,
-      stoppedAt: null
-    });
-
-    await logAction('START', userId, selectedTime);
-
-    if (!process.env.SLACK_CHANNEL_ID) {
-      throw new Error('SLACK_CHANNEL_ID is not defined');
-    }
-
-    await client.chat.postMessage({
-      channel: process.env.SLACK_CHANNEL_ID,
-      text: `<@${userId}>がマシンを開けました。${selectedTime}にしめます。`
-    });
-  } catch (error) {
-    console.error('Error handling time selection:', error);
-    if (body.user.id) {
-      await client.chat.postMessage({
-        channel: body.user.id,
-        text: 'エラーが発生しました。もう一度お試しください。'
-      });
-    }
-  }
-});
-
-(async () => {
-  await app.start(process.env.PORT || 3000);
-  console.log('⚡️ Slackボットが起動しました！');
-})(); 
+*/ 
