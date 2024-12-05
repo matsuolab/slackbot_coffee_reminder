@@ -253,7 +253,24 @@ const handleOnCommand = async (userId: string, client: any, triggerId: string) =
     }
   });
 
-  const port = process.env.PORT || 3000;
-  receiver.app.listen(port, () => {
-    console.log(`⚡️ Slackボットサーバーが起動しました - ポート ${port}`);
+  // 通知チェック用エンドポイント
+  receiver.router.post('/check-notifications', async (req, res) => {
+    try {
+      await checkAndNotify(app.client.chat.postMessage);
+      res.status(200).json({ status: 'success' });
+    } catch (error) {
+      console.error('Notification check error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
   });
+
+  // Vercel用のエンドポイント
+  receiver.router.get('/api/health', (req, res) => {
+    res.status(200).json({ status: 'ok' });
+  });
+
+  // Expressサーバーの起動
+  (async () => {
+    await app.start(process.env.PORT || 3000);
+    console.log('⚡️ Bolt app is running!');
+  })();
