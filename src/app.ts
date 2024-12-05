@@ -45,6 +45,33 @@ app.command('/barista', async ({ command, client, say, ack }) => {
         case 'help':
           await handleHelpCommand(say);
           break;
+        case 'matsuo':
+          await say(':prof_matsuo: < 100万ごえのコーヒーの味はどうすか？');
+          break;
+        case 'jeong':
+          await say('ちょん< 正直味のちがいわからん :hanpanai:');
+          break;
+        case 'taniguchi':
+          await say('谷口< 俺は人が開けたときしか飲まない');
+          break;
+        case 'ohshima':
+          await say('大島< そのコップはおとといのやつ');
+          break;
+        case 'nakano':
+          await say('中野< カフェインが足りない :atamawarui:');
+          break;
+        case 'joji':
+          await say(':joji: < カフェインとったら筋トレしろって');
+          break;
+        case 'minegishi':
+          await say(':gouki: < ねむい');
+          break;
+        case 'iiyama':
+          await say('飯山< カフェインは錠剤のんでるのでコーヒーいらない');
+          break;
+        case 'secret':
+          await say('隠しコマンド一覧\n/barista jeong\n/barista taniguchi\n/barista ohshima\n/barista nakano\n/barista joji\n/barista minegishi\n/barista iiyama');
+          break;
         default:
           await client.chat.postMessage({
             channel: command.user_id,
@@ -206,7 +233,7 @@ const handleOnCommand = async (userId: string, client: any, triggerId: string) =
     
     await client.chat.postMessage({
       channel: process.env.SLACK_CHANNEL_ID,
-      text: `<@${userId}>さんがマシンをしめました。おつかれさまでした！`
+      text: `マシンをしめました!:cry2: \n<@${userId}>さん、今日もお手入れありがとうございました！:fb-laugh:`
     });
   };
   
@@ -217,16 +244,16 @@ const handleOnCommand = async (userId: string, client: any, triggerId: string) =
         hour: '2-digit',
         minute: '2-digit'
       });
-      await say(`マシンは起動中です。開けた時刻: ${startTime}、しめる時刻: ${currentState.cleanupTime}、開けた人: <@${currentState.startedBy}>さん`);
+      await say(`:coffee_parrot: マシンは起動中です。:coffee_parrot: \n開けた時刻: ${startTime}、しめる時刻: ${currentState.cleanupTime}、開けた人: <@${currentState.startedBy}>さん`);
     } else {
       if (currentState.stoppedAt && currentState.stoppedBy) {
         const stoppedTime = new Date(currentState.stoppedAt).toLocaleTimeString('ja-JP', {
           hour: '2-digit',
           minute: '2-digit'
         });
-        await say(`マシンは停止しています。しめた時刻: ${stoppedTime}、しめた人: <@${currentState.stoppedBy}>さん`);
+        await say(`:loading: マシンは停止しています。:loading: \nしめた時刻: ${stoppedTime}、しめた人: <@${currentState.stoppedBy}>さん`);
       } else {
-        await say('マシンは停止しています。');
+        await say(':loading: マシンは停止しています。:loading:');
       }
     }
   };
@@ -266,7 +293,7 @@ const handleOnCommand = async (userId: string, client: any, triggerId: string) =
   
       await client.chat.postMessage({
         channel: process.env.SLACK_CHANNEL_ID,
-        text: `<@${userId}>がマシンを開けました。${selectedTime}にしめます。`
+        text: `マシンが開きました！\n開けてくれた人: <@${userId}>、しめる時刻: ${selectedTime}`
       });
     } catch (error) {
       console.error('Error handling time selection:', error);

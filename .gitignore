@@ -2,3 +2,8 @@
 .history
 node_modules
 .vercel
+ngrok
+logs
+package-lock.json
+.husky
+.env.local

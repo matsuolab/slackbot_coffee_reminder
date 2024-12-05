@@ -19,7 +19,7 @@ let stateCache: {
   timestamp: number;
 } | null = null;
 
-const CACHE_TTL = 30000; // 30秒
+const CACHE_TTL = 5000; // 5秒
 
 export const getCurrentState = async (): Promise<CoffeeMachineState> => {
   if (stateCache && Date.now() - stateCache.timestamp < CACHE_TTL) {
@@ -66,24 +66,23 @@ export const updateState = async (state: CoffeeMachineState) => {
   try {
     const { error } = await supabase
       .from('machine_state')
-      .upsert([
-        {
-          is_running: state.isRunning,
-          started_by: state.startedBy,
-          started_at: state.startedAt,
-          cleanup_time: state.cleanupTime,
-          stopped_by: state.stoppedBy,
-          stopped_at: state.stoppedAt,
-          updated_at: new Date().toISOString()
-        }
-      ], {
+      .upsert([{
+        is_running: state.isRunning,
+        started_by: state.startedBy,
+        started_at: state.startedAt,
+        cleanup_time: state.cleanupTime,
+        stopped_by: state.stoppedBy,
+        stopped_at: state.stoppedAt,
+        updated_at: new Date().toISOString()
+      }], {
         onConflict: 'id'
       });
 
-    if (error) {
-      console.error('Error in updateState:', error);
-      throw error;
-    }
+    if (error) throw error;
+    
+    // キャッシュを無効化
+    stateCache = null;
+    
   } catch (error) {
     console.error('Failed to update state:', error);
     throw error;
