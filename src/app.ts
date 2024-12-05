@@ -7,27 +7,28 @@ import { checkAndNotify } from './utils/notifications';
 import { withRetry } from './utils/retry';
 
 const receiver = new ExpressReceiver({
-  signingSecret: process.env.SLACK_SIGNING_SECRET!,
-  processBeforeResponse: true,
+  signingSecret: process.env.SLACK_SIGNING_SECRET!
 });
 
 const app = new App({
   token: process.env.SLACK_BOT_TOKEN,
   signingSecret: process.env.SLACK_SIGNING_SECRET,
   receiver: receiver,
-  processBeforeResponse: true,
-  socketMode: false,
+  socketMode: false
 });
 
 // エラーハンドリングを追加
 app.error(async (error) => {
-  console.error('Slackアプリでエラーが発生しました:', error);
+  console.error('Slackアプリエラー詳細:', {
+    message: error.message,
+    stack: error.stack,
+    timestamp: new Date().toISOString()
+  });
 });
 
 // Slackコマンドのハンドラ
-app.command('/barista', async ({ command, ack, client, say }) => {
+app.command('/barista', async ({ command, client, say, ack }) => {
   await ack();
-
   try {
     await withRetry(async () => {
       const [action] = command.text.split(' ');
@@ -82,7 +83,8 @@ const handleOnCommand = async (userId: string, client: any, triggerId: string) =
           callback_id: 'coffee_time_selection',
           title: {
             type: 'plain_text',
-            text: '片付け時間の選択'
+            text: '片付け時間の選択',
+            emoji: true
           },
           blocks: [
             {
@@ -101,19 +103,14 @@ const handleOnCommand = async (userId: string, client: any, triggerId: string) =
                   action_id: 'hour_select',
                   placeholder: {
                     type: 'plain_text',
-                    text: '時間を選択'
-                  },
-                  initial_option: {
-                    text: {
-                      type: 'plain_text',
-                      text: '15時'
-                    },
-                    value: '15'
+                    text: '時間を選択',
+                    emoji: true
                   },
                   options: hours.map(hour => ({
                     text: {
                       type: 'plain_text',
-                      text: `${hour}時`
+                      text: `${hour}時`,
+                      emoji: true
                     },
                     value: hour.toString()
                   }))
@@ -123,19 +120,14 @@ const handleOnCommand = async (userId: string, client: any, triggerId: string) =
                   action_id: 'minute_select',
                   placeholder: {
                     type: 'plain_text',
-                    text: '分を選択'
-                  },
-                  initial_option: {
-                    text: {
-                      type: 'plain_text',
-                      text: '00分'
-                    },
-                    value: '00'
+                    text: '分を選択',
+                    emoji: true
                   },
                   options: minutes.map(minute => ({
                     text: {
                       type: 'plain_text',
-                      text: `${minute.toString().padStart(2, '0')}分`
+                      text: `${minute.toString().padStart(2, '0')}分`,
+                      emoji: true
                     },
                     value: minute.toString().padStart(2, '0')
                   }))
@@ -145,7 +137,8 @@ const handleOnCommand = async (userId: string, client: any, triggerId: string) =
           ],
           submit: {
             type: 'plain_text',
-            text: '確定'
+            text: '確定',
+            emoji: true
           }
         }
       });
@@ -217,9 +210,8 @@ const handleOnCommand = async (userId: string, client: any, triggerId: string) =
   };
   
   // 時間選択のハンドラ
-  app.view('coffee_time_selection', async ({ ack, body, view, client }) => {
+  app.view('coffee_time_selection', async ({ body, view, client, ack }) => {
     await ack();
-    
     try {
       const hourValue = view.state.values.time_select_block.hour_select.selected_option?.value;
       const minuteValue = view.state.values.time_select_block.minute_select.selected_option?.value;
