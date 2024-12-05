@@ -176,7 +176,7 @@ const handleOffCommand = async (userId: string, client: any) => {
   
   await client.chat.postMessage({
     channel: process.env.SLACK_CHANNEL_ID,
-    text: `<@${userId}>がマシンをしめました。おつかれさまでした！`
+    text: `<@${userId}>さんがマシンをしめました。おつかれさまでした！`
   });
 };
 
@@ -187,14 +187,14 @@ const handleStatusCommand = async (say: Function) => {
       hour: '2-digit',
       minute: '2-digit'
     });
-    await say(`マシンは起動中です。開けた時刻: ${startTime}、しめる時刻: ${currentState.cleanupTime}、開けた人: <@${currentState.startedBy}>`);
+    await say(`マシンは起動中です。開けた時刻: ${startTime}、しめる時刻: ${currentState.cleanupTime}、開けた人: <@${currentState.startedBy}>さん`);
   } else {
     if (currentState.stoppedAt && currentState.stoppedBy) {
       const stoppedTime = new Date(currentState.stoppedAt).toLocaleTimeString('ja-JP', {
         hour: '2-digit',
         minute: '2-digit'
       });
-      await say(`マシンは停止しています。しめた時刻: ${stoppedTime}、しめた人: <@${currentState.stoppedBy}>`);
+      await say(`マシンは停止しています。しめた時刻: ${stoppedTime}、しめた人: <@${currentState.stoppedBy}>さん`);
     } else {
       await say('マシンは停止しています。');
     }
@@ -202,7 +202,7 @@ const handleStatusCommand = async (say: Function) => {
 };
 
 const handleHelpCommand = async (say: Function) => {
-  await say('使用可能なコマンド:\n/barista on - マシン起動報告としめる時刻の選択\n/barista off - マシンを停止\n/barista status - マシンの起動状態を確認\n/barista help - このヘルプメッセージを表示');
+  await say('使用可能なコマンド:\n/barista on - マシンをあけるとき使う\n/barista off - マシンをしめるとき使う\n/barista status - マシンの起動状態・開けた人・しめた人を確認できる\n/barista help - このヘルプメッセージを表示');
 };
 
 // 1分ごとにチェック
@@ -248,7 +248,7 @@ app.view('coffee_time_selection', async ({ ack, body, view, client }) => {
 
     await client.chat.postMessage({
       channel: process.env.SLACK_CHANNEL_ID,
-      text: `<@${userId}>がマシンを起動しました。${selectedTime}にしめます。`
+      text: `<@${userId}>がマシンを開けました。${selectedTime}にしめます。`
     });
   } catch (error) {
     console.error('Error handling time selection:', error);

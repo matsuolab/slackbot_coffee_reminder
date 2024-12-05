@@ -10,11 +10,20 @@ export const checkAndNotify = async (say: Function) => {
   const thirtyMinsBefore = addMinutes(cleanupTime, -30);
   const thirtyMinsAfter = addMinutes(cleanupTime, 30);
 
-  if (now.getTime() === thirtyMinsBefore.getTime()) {
-    await say(`<@${state.startedBy}> あと30分で片付ける時間です`);
+  const nowTime = now.getTime();
+  const targetTime = thirtyMinsBefore.getTime();
+  
+  if (Math.abs(nowTime - targetTime) <= 60000) {
+    await say({
+      channel: process.env.SLACK_CHANNEL_ID,
+      text: `<@${state.startedBy}> あと30分で片付ける時間です`
+    });
   }
 
   if (isAfter(now, thirtyMinsAfter)) {
-    await say(`<!here> マシンを片付け忘れています！`);
+    await say({
+      channel: process.env.SLACK_CHANNEL_ID,
+      text: `<!here> マシンを片付け忘れています！`
+    });
   }
 }; 

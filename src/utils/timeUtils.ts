@@ -4,14 +4,8 @@ export const generateHourOptions = (currentTime: Date): number[] => {
     const current = new Date(currentTime);
     const currentHour = current.getHours();
     
-    let startHour = 15;
-    
-    if (currentHour >= 15) {
-      startHour = currentHour;
-    }
-    
     const hours: number[] = [];
-    for (let hour = startHour; hour <= 21; hour++) {
+    for (let hour = currentHour; hour <= 23; hour++) {
       hours.push(hour);
     }
     
