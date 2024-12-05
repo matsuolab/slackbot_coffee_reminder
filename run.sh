@@ -1,4 +1,4 @@
-#! /bin/bash
+#!/usr/bin/bash
 
 source import-env.sh .env
 
@@ -12,7 +12,7 @@ mkdir -p logs
 
 # ngrokをホスト側で起動
 ./ngrok config add-authtoken $NGROK_TOKEN
-nohup ./ngrok http 3000 > ./logs/ngrok.log 2>&1 & 
+nohup ./ngrok http 3000 >./logs/ngrok.log 2>&1 &
 
 # ngrokが起動するまで少し待つ
 sleep 5
@@ -25,7 +25,7 @@ echo "ngrok URL: $NGROK_URL" #> ./logs/ngrok_URL.log
 # 2. Interactivity & ShortcutsのRequest URL
 # 3. Slash CommandsのRequest URL
 
-nohup npm run dev > ./logs/npm_dev.log 2>&1 &
+nohup npm run dev >./logs/npm_dev.log 2>&1 &
 
 # 実行中のプロセス確認
 #ps aux | grep ngrok

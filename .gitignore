@@ -8,4 +8,3 @@ package-lock.json
 .husky
 .env.local
 .git-credentials
-.github
