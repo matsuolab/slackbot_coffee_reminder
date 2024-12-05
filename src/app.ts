@@ -23,6 +23,16 @@ receiver.router.post('/', (req, res) => {
   res.status(200).send('OK');
 });
 
+receiver.router.post('/check-notifications', async (req, res) => {
+  try {
+    await checkAndNotify(app.client.chat.postMessage.bind(app.client.chat));
+    res.status(200).send('OK');
+  } catch (error) {
+    console.error('Notification check error:', error);
+    res.status(500).send('Error');
+  }
+});
+
 app.command('/barista', async ({ command, ack, client, say }) => {
   await ack();
 
@@ -204,17 +214,6 @@ const handleStatusCommand = async (say: Function) => {
 const handleHelpCommand = async (say: Function) => {
   await say('使用可能なコマンド:\n/barista on - マシンをあけるとき使う\n/barista off - マシンをしめるとき使う\n/barista status - マシンの起動状態・開けた人・しめた人を確認できる\n/barista help - このヘルプメッセージを表示');
 };
-
-// 1分ごとにチェック
-const notificationJob = new CronJob('* * * * *', async () => {
-  try {
-    await checkAndNotify(app.client.chat.postMessage.bind(app.client.chat));
-  } catch (error) {
-    console.error('Notification error:', error);
-  }
-});
-
-notificationJob.start();
 
 // 時間選択のハンドラ
 app.view('coffee_time_selection', async ({ ack, body, view, client }) => {

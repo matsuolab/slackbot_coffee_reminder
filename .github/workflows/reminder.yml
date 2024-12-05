@@ -1,0 +1,14 @@
+name: Reminder Check
+on:
+  schedule:
+    - cron: '*/30 * * * *'  # 30分ごとに実行
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger notification check
+        env:
+          VERCEL_URL: ${{ secrets.VERCEL_URL }}
+        run: |
+          curl -X POST https://$VERCEL_URL/check-notifications 
