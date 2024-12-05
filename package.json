@@ -1,25 +1,61 @@
 {
+  "name": "slackbot_coffee_reminder",
+  "version": "1.0.0",
+  "description": "コーヒーマシンの片付け時間を通知するSlackボット",
+  "main": "dist/app.js",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/app.js",
+    "dev": "ts-node src/app.ts",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "lint": "eslint src/**/*.ts",
+    "lint:fix": "eslint src/**/*.ts --fix",
+    "format": "prettier --write src/**/*.ts",
+    "prepare": "husky install",
+    "type-check": "tsc --noEmit"
+  },
   "dependencies": {
     "@slack/bolt": "^4.1.1",
     "@supabase/supabase-js": "^2.46.2",
-    "@types/node": "^22.10.1",
+    "@vercel/kv": "^3.0.0",
     "cron": "^3.2.1",
-    "date-fns": "^4.1.0",
-    "dotenv": "^16.4.7",
+    "date-fns": "^2.30.0",
+    "date-fns-tz": "^2.0.0",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.14",
+    "@types/node": "^22.10.1",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "eslint": "^8.0.0",
+    "husky": "^8.0.0",
+    "jest": "^29.7.0",
+    "lint-staged": "^15.0.0",
+    "prettier": "^3.0.0",
+    "ts-jest": "^29.2.5",
+    "ts-node": "^10.9.0",
     "typescript": "^5.7.2"
   },
-  "name": "slackbot_coffee_reminder",
-  "version": "1.0.0",
-  "main": "index.js",
-  "scripts": {
-    "dev": "ts-node src/app.ts",
-    "build": "tsc",
-    "start": "node dist/app.js",
-    "vercel-build": "tsc && cp package.json dist/"
+  "lint-staged": {
+    "*.ts": [
+      "eslint --fix",
+      "prettier --write"
+    ]
   },
+  "keywords": [
+    "slack",
+    "bot",
+    "coffee",
+    "reminder",
+    "typescript"
+  ],
   "author": "",
-  "license": "ISC",
-  "devDependencies": {
-    "ts-node": "^10.9.2"
-  }
+  "license": "ISC"
 }

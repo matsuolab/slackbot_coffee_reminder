@@ -2,7 +2,11 @@
   "compilerOptions": {
     "outDir": "./dist",
     "rootDir": "./src",
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "module": "commonjs",
+    "target": "es2017",
+    "moduleResolution": "node",
+    "allowJs": true
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules"]

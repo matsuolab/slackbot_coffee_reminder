@@ -1,7 +1,7 @@
 name: Reminder Check
 on:
   schedule:
-    - cron: '*/30 * * * *'  # 30分ごとに実行
+    - cron: '*/30 * * * *'
 
 jobs:
   check:
@@ -11,4 +11,7 @@ jobs:
         env:
           VERCEL_URL: ${{ secrets.VERCEL_URL }}
         run: |
-          curl -X POST https://$VERCEL_URL/check-notifications 
+          curl -X POST https://$VERCEL_URL/check-notifications \
+          -H "Content-Type: application/json" \
+          --fail --retry 3 --retry-delay 5 \
+          || echo "Failed to trigger notification check"

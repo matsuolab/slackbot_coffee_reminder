@@ -257,16 +257,30 @@ const handleOnCommand = async (userId: string, client: any, triggerId: string) =
   receiver.router.post('/check-notifications', async (req, res) => {
     try {
       await checkAndNotify(app.client.chat.postMessage);
-      res.status(200).json({ status: 'success' });
+      res.status(200).json({ 
+        status: 'success',
+        message: 'Notification check completed'
+      });
     } catch (error) {
       console.error('Notification check error:', error);
-      res.status(500).json({ error: 'Internal server error' });
+      res.status(500).json({ 
+        status: 'error',
+        message: 'Failed to check notifications'
+      });
     }
   });
 
   // Vercel用のエンドポイント
   receiver.router.get('/api/health', (req, res) => {
     res.status(200).json({ status: 'ok' });
+  });
+
+  // ルートパスのハンドラ
+  receiver.router.get('/', (req, res) => {
+    res.status(200).json({ 
+      status: 'ok',
+      message: 'Slack Coffee Reminder Bot is running'
+    });
   });
 
   // Expressサーバーの起動
@@ -278,4 +292,4 @@ const handleOnCommand = async (userId: string, client: any, triggerId: string) =
   }
 
   // Vercel用のエクスポート
-  export default receiver.app;
+  module.exports = receiver.app;

@@ -1,14 +1,17 @@
 import { getCurrentState } from '../db/schema';
 import { parseISO, addMinutes, isAfter } from 'date-fns';
+import { utcToZonedTime, zonedTimeToUtc } from 'date-fns-tz';
 
 export const checkAndNotify = async (say: Function) => {
   const state = await getCurrentState();
   if (!state.isRunning) return;
 
-  const now = new Date();
-  const cleanupTime = parseISO(`${new Date().toISOString().split('T')[0]}T${state.cleanupTime}:00`);
-  const thirtyMinsBefore = addMinutes(cleanupTime, -30);
-  const thirtyMinsAfter = addMinutes(cleanupTime, 30);
+  const now = utcToZonedTime(new Date(), 'Asia/Tokyo');
+  const cleanupTime = parseISO(`${now.toISOString().split('T')[0]}T${state.cleanupTime}:00`);
+  const jstCleanupTime = utcToZonedTime(cleanupTime, 'Asia/Tokyo');
+  
+  const thirtyMinsBefore = addMinutes(jstCleanupTime, -30);
+  const thirtyMinsAfter = addMinutes(jstCleanupTime, 30);
 
   const nowTime = now.getTime();
   const targetTime = thirtyMinsBefore.getTime();
