@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import { App, ExpressReceiver } from '@slack/bolt';
-import { generateHourOptions, generateMinuteOptions } from './utils/timeUtils';
+import { generateHourOptions, generateMinuteOptions, getDefaultHour } from './utils/timeUtils';
 import { getCurrentState, updateState, logAction } from './db/schema';
 import { CronJob } from 'cron';
 import { checkAndNotify } from './utils/notifications';
@@ -74,7 +74,31 @@ const handleOnCommand = async (userId: string, client: any, triggerId: string) =
     const currentTime = new Date();
     const hours = generateHourOptions(currentTime);
     const minutes = generateMinuteOptions();
+    const defaultHour = getDefaultHour(currentTime);
   
+    if (!hours.includes(15)) {
+      hours.push(15);
+      hours.sort((a, b) => a - b);
+    }
+  
+    const defaultHourOption = {
+      text: {
+        type: 'plain_text',
+        text: `${defaultHour}時`,
+        emoji: true
+      },
+      value: defaultHour.toString()
+    };
+
+    const defaultMinuteOption = {
+      text: {
+        type: 'plain_text',
+        text: '00分',
+        emoji: true
+      },
+      value: '00'
+    };
+
     try {
       await client.views.open({
         trigger_id: triggerId,
@@ -113,7 +137,8 @@ const handleOnCommand = async (userId: string, client: any, triggerId: string) =
                       emoji: true
                     },
                     value: hour.toString()
-                  }))
+                  })),
+                  initial_option: defaultHourOption
                 },
                 {
                   type: 'static_select',
@@ -130,7 +155,8 @@ const handleOnCommand = async (userId: string, client: any, triggerId: string) =
                       emoji: true
                     },
                     value: minute.toString().padStart(2, '0')
-                  }))
+                  })),
+                  initial_option: defaultMinuteOption
                 }
               ]
             }
@@ -270,35 +296,18 @@ const handleOnCommand = async (userId: string, client: any, triggerId: string) =
     }
   });
 
-  // Vercel用のエンドポイント
-  receiver.router.get('/api/health', (req, res) => {
-    res.status(200).json({ status: 'ok' });
-  });
-
-  // ルートパスのハンドラ
-  receiver.router.get('/', (req, res) => {
-    res.status(200).json({ 
-      status: 'ok',
-      message: 'Slack Coffee Reminder Bot is running'
-    });
-  });
-
   // Expressサーバーの起動
-  if (process.env.NODE_ENV !== 'production') {
-    (async () => {
-      await app.start(process.env.PORT || 3000);
-      console.log('⚡️ Bolt app is running!');
-    })();
-  }
-
-  // Vercel用のエクスポート
-  module.exports = receiver.app;
+  (async () => {
+    const port = process.env.PORT || 3000;
+    await app.start(port);
+    console.log(`⚡️ Bolt app is running on port ${port}!`);
+  })();
 
   app.message('ping', async ({ say }) => {
     await say('pong');
   });
 
   // 定期的なウォームアップ用エンドポイント
-  app.receiver.router.get('/warmup', (req, res) => {
+  receiver.router.get('/warmup', (req, res) => {
     res.send('OK');
   });
