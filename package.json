@@ -15,7 +15,7 @@
     "dev": "ts-node src/app.ts",
     "build": "tsc",
     "start": "node dist/app.js",
-    "vercel-build": "tsc"
+    "vercel-build": "tsc && cp package.json dist/"
   },
   "author": "",
   "license": "ISC",

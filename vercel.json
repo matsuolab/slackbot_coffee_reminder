@@ -8,9 +8,19 @@
   ],
   "routes": [
     {
-      "src": "/(.*)",
+      "src": "/check-notifications",
       "dest": "src/app.ts",
-      "methods": ["GET", "POST", "OPTIONS"]
+      "methods": ["POST"]
+    },
+    {
+      "src": "/api/health",
+      "dest": "src/app.ts",
+      "methods": ["GET"]
+    },
+    {
+      "src": "/slack/events",
+      "dest": "src/app.ts",
+      "methods": ["POST"]
     }
   ]
 }
