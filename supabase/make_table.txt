@@ -1,0 +1,30 @@
+-- machine_stateテーブルの作成
+CREATE TABLE machine_state (
+  id INT PRIMARY KEY DEFAULT 1,
+  is_running BOOLEAN NOT NULL DEFAULT false,
+  started_by TEXT,
+  started_at TIMESTAMP WITH TIME ZONE,
+  cleanup_time TEXT,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT single_row CHECK (id = 1)
+);
+
+INSERT INTO machine_state (id, is_running, started_by, started_at, cleanup_time)
+VALUES (1, false, null, null, null);
+
+-- machine_logsテーブルの作成
+CREATE TABLE machine_logs (
+  id SERIAL PRIMARY KEY,
+  action TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  cleanup_time TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- インデックスの作成
+CREATE INDEX idx_machine_state_updated_at ON machine_state(updated_at);
+CREATE INDEX idx_machine_logs_created_at ON machine_logs(created_at);
+
+ALTER TABLE machine_state
+ADD COLUMN stopped_by text,
+ADD COLUMN stopped_at timestamp with time zone;

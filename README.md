@@ -1,31 +1,80 @@
-# コーヒーマシン管理Slackボット
+# ☕ コーヒーマシン管理Slackボット取扱説明書
+## 🎯 このボットでできること
+- ✨ マシンの使用状態をリアルタイムで確認
+- ⏰ 片付け時間の30分前に自動通知
+- 🔔 片付け忘れ防止リマインド
+- 📝 使用履歴の自動記録
 
-## 概要
-研究室のコーヒーマシンの使用状況を管理し、片付け時間を通知するSlackボットです。
+## コマンド一覧
+```
+/barista on
+/barista off
+/barista status
+/barista help
+```
 
-## 機能
+## 📱 基本的な使い方
 
-- マシンの使用状態の管理
-- 片付け時間の30分前に通知
-- 片付け忘れ防止のリマインド（片付け忘れていた場合、片付け時間から30分後にチャンネルへ@hereメンション）
-- 使用履歴のログ記録
+1️⃣ マシンを使い始めるとき: 片付け時間を選択できるポップアップが表示されます
+```
+/barista on
+```
 
-## 使用可能なコマンド
 
-- `/barista on` - マシンを開けるときに使用。片付け時間を選択できます
-- `/barista off` - マシンを閉めるときに使用。開けた人と違ってもOK
-- `/barista status` - マシンの現在の状態、開けた人、閉めた人を確認
-- `/barista help` - 使用可能なコマンド一覧を表示
+2️⃣ マシンを片付けるとき: 開けた人と異なる人でも大丈夫です！
+```
+/barista off
+```
 
+
+3️⃣ 現在の状態を確認
+```
+/barista status
+```
+以下の情報が確認できます：
+- マシンが使用中かどうか
+- 誰が開けたか
+- いつ片付ける予定か
+
+
+4️⃣ 使い方を確認
+```
+/barista help
+```
+
+## ⚠️ 重要な通知について
+1. 30分前通知 🕒
+- 片付け時間の30分前に自動でお知らせします
+- マシンを開けた人にメンションが飛びます
+
+2. 片付け忘れ通知 ⚡
+- 片付け時間から30分経過しても片付いていない場合
+- チャンネル全体（@here）にリマインドが送られます
+
+### 💡 Tips
+- マシンは誰が開けても、誰が片付けてもOKです
+- 困ったときは /barista help で使い方を確認できます
+
+
+
+# ここからはエンジニア向け
 ## セットアップ方法
 
-1. リポジトリのクローン
+### 1. リポジトリのクローン
 
 ```
 git clone https://github.com/matsuolab/slackbot_coffee_reminder.git
 ```
 
-2. 環境変数の設定
+### 2. supabaseでDB作成
+
+以下2つをSQL Editorにコピペ&RunでDBができる
+- supabase/make_table.txt
+- supabase/enable_rsl.txt
+
+supabase URLとkeyをメモ
+
+### 3. 環境変数の設定
 
 `.env`ファイルを作成し、以下の環境変数を設定：
 
@@ -40,13 +89,13 @@ PORT=3000
 NGROK_TOKEN=****  # ngrokのウェブサイトで取得
 ```
 
-3. アプリケーションの起動
+### 4. アプリケーションの起動
 （nohupで共有サーバーp-shared-1で動かし続けている）
 ```
 bash run.sh
 ```
 
-4. Slack APIの設定
+### 5. Slack APIの設定
 
 表示されたngrok URL（`https://xxxxx.ngrok-free.app`）末尾に`/slack/events`を追加して`https://xxxxx.ngrok-free.app/slack/events`とし、以下の3箇所に設定：
 - Event SubscriptionsのRequest URL
@@ -59,6 +108,13 @@ bash run.sh
 - Node.js >= 18.0.0
 - npm >= 8.0.0
 
-### 隠しコマンド
+## 技術スタック
+- TypeScript
+- Slack Bolt Framework
+- Supabase
+- Node.js (v18以上)
+- Express
+
+## 隠しコマンド
 ここまでよんだあなたにおしえようひみつのじゅもんを．．．
 - `/barista secret` - その他の隠しコマンド一覧を表示

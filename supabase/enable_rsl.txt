@@ -1,0 +1,16 @@
+-- RLSを有効化
+ALTER TABLE machine_state ENABLE ROW LEVEL SECURITY;
+ALTER TABLE machine_logs ENABLE ROW LEVEL SECURITY;
+
+-- 全ての操作を許可するポリシーを作成
+CREATE POLICY "Enable all operations for machine_state"
+ON machine_state
+FOR ALL
+USING (true)
+WITH CHECK (true);
+
+CREATE POLICY "Enable all operations for machine_logs"
+ON machine_logs
+FOR ALL
+USING (true)
+WITH CHECK (true);
