@@ -4,7 +4,7 @@ export const generateHourOptions = (currentTime: Date): number[] => {
     
     const hours: number[] = [];
     const startHour = Math.max(currentHour, 12);
-    const endHour = 23;
+    const endHour = 21;
     
     for (let hour = startHour; hour <= endHour; hour++) {
       hours.push(hour);
