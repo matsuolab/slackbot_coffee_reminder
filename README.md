@@ -99,7 +99,25 @@ PORT=3000
 NGROK_TOKEN=****  # ngrokのウェブサイトで取得
 ```
 
-### 4. アプリケーションの起動
+### 4. パッケージのインストールなど
+- ngrok: https://download.ngrok.com/linux?tab=download
+- node.js: https://nodejs.org/en/download/package-manager
+
+```bash
+npm install
+```
+```bash
+cat ./logs/npm_dev.log
+```
+#以下のような表示がでたらOK
+```
+> slackbot_coffee_reminder@1.0.0 dev
+> ts-node src/app.ts(node:41546) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. #Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+⚡️ Bolt app is running on port 3000!
+```
+
+### 5. アプリケーションの起動
 
 （nohupで共有サーバーp-shared-1で動かし続けている）
 
@@ -107,7 +125,7 @@ NGROK_TOKEN=****  # ngrokのウェブサイトで取得
 bash run.sh
 ```
 
-### 5. Slack APIの設定
+### 6. Slack APIの設定
 
 表示されたngrok URL（`https://xxxxx.ngrok-free.app`）末尾に`/slack/events`を追加して`https://xxxxx.ngrok-free.app/slack/events`とし、以下の3箇所に設定：
 

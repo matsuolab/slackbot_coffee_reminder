@@ -3,9 +3,9 @@
 source import-env.sh .env
 
 # 既存のプロセスを終了
-pkill -f "npm run dev"
-pkill -f "ngrok"
-lsof -i :3000 | grep Seong | awk '{print $2}' | xargs kill -9
+#pkill -f "npm run dev"
+#pkill -f "ngrok"
+#lsof -i :3000 | grep Seong | awk '{print $2}' | xargs kill -9
 
 # logsディレクトリがない場合は作成
 mkdir -p logs
@@ -25,7 +25,7 @@ echo "ngrok URL: $NGROK_URL" #> ./logs/ngrok_URL.log
 # 2. Interactivity & ShortcutsのRequest URL
 # 3. Slash CommandsのRequest URL
 
-nohup npm run dev >./logs/npm_dev.log 2>&1 &
+nohup npm run dev > ./logs/npm_dev.log 2>&1 &
 
 # 実行中のプロセス確認
 #ps aux | grep ngrok
