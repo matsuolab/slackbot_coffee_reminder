@@ -3,9 +3,9 @@
 source import-env.sh .env
 
 # 既存のプロセスを終了
-#pkill -f "npm run dev"
-#pkill -f "ngrok"
-#lsof -i :3000 | grep Seong | awk '{print $2}' | xargs kill -9
+pkill -f "npm run dev"
+pkill -f "ngrok"
+lsof -i :3000 | grep Seong | awk '{print $2}' | xargs kill -9
 
 # logsディレクトリがない場合は作成
 mkdir -p logs

@@ -106,6 +106,14 @@ NGROK_TOKEN=****  # ngrokのウェブサイトで取得
 ```bash
 npm install
 ```
+
+### 5. アプリケーションの起動
+
+（nohupで共有サーバーp-shared-1で動かし続けている）
+
+```bash
+bash run.sh
+```
 ```bash
 cat ./logs/npm_dev.log
 ```
@@ -115,14 +123,6 @@ cat ./logs/npm_dev.log
 > ts-node src/app.ts(node:41546) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. #Please use a userland alternative instead.
 (Use `node --trace-deprecation ...` to show where the warning was created)
 ⚡️ Bolt app is running on port 3000!
-```
-
-### 5. アプリケーションの起動
-
-（nohupで共有サーバーp-shared-1で動かし続けている）
-
-```bash
-bash run.sh
 ```
 
 ### 6. Slack APIの設定
