@@ -108,26 +108,13 @@ export const logAction = async (
   if (error) throw error;
 };
 
+// JEONGさんのユーザーID（固定値）
+const JEONG_USER_ID = 'U04Q5BG479T'; // JEONGさんの実際のSlack ユーザーID
+
+// getTodayCleaner関数を修正して常にJEONGさんを返すように
 export const getTodayCleaner = async (): Promise<string | null> => {
-  const today = format(utcToZonedTime(new Date(), 'Asia/Tokyo'), 'yyyy-MM-dd');
-  
-  try {
-    const { data, error } = await supabase
-      .from('cleaning_schedule')
-      .select('user_id')
-      .eq('date', today)
-      .single();
-      
-    if (error) {
-      console.error('Error getting today cleaner:', error);
-      return null;
-    }
-    
-    return data?.user_id || null;
-  } catch (error) {
-    console.error('Error in getTodayCleaner:', error);
-    return null;
-  }
+  // 常にJEONGさんのIDを返す
+  return JEONG_USER_ID;
 };
 
 export const getWeeklySchedule = async (useNextWeek = false): Promise<WeeklySchedule> => {
@@ -300,57 +287,9 @@ export const registerCleaningSchedules = async (
   }
 };
 
-// JEONGさんのユーザーID（固定値）
-const JEONG_USER_ID = 'U04Q5BG479T'; // ここにJEONGさんの実際のSlack ユーザーIDを設定
-
-// JEONGさんを毎日の掃除当番として設定する関数
+// setDailyCleanerAsJeong関数はもう不要なので削除してもよいですが、
+// 将来の拡張性のために保持しておくことも可能
 export const setDailyCleanerAsJeong = async (): Promise<boolean> => {
-  try {
-    // 今日の日付を取得
-    const today = format(utcToZonedTime(new Date(), 'Asia/Tokyo'), 'yyyy-MM-dd');
-    
-    // 既存の割り当てを確認
-    const { data: existingData, error: checkError } = await supabase
-      .from('cleaning_schedule')
-      .select('*')
-      .eq('date', today)
-      .single();
-      
-    if (checkError && checkError.code !== 'PGRST116') { // PGRST116はデータがない場合のエラー
-      console.error('Error checking existing assignment:', checkError);
-      return false;
-    }
-    
-    if (existingData) {
-      // 既存データを更新
-      const { error } = await supabase
-        .from('cleaning_schedule')
-        .update({ user_id: JEONG_USER_ID })
-        .eq('date', today);
-        
-      if (error) {
-        console.error('Error updating assignment to JEONG:', error);
-        return false;
-      }
-    } else {
-      // 新規データを作成
-      const { error } = await supabase
-        .from('cleaning_schedule')
-        .insert([{
-          user_id: JEONG_USER_ID,
-          date: today,
-          completed: false
-        }]);
-        
-      if (error) {
-        console.error('Error creating assignment for JEONG:', error);
-        return false;
-      }
-    }
-    
-    return true;
-  } catch (error) {
-    console.error('Error in setDailyCleanerAsJeong:', error);
-    return false;
-  }
+  // この関数は実質的に使われなくなりますが、API互換性のために残します
+  return true;
 }; 

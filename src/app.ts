@@ -345,23 +345,6 @@ const dailyReminderCron = new CronJob(
   'Asia/Tokyo'
 );
 
-// 毎日0時にJEONGさんを掃除当番として設定するジョブを追加
-const dailyCleanerSetupCron = new CronJob(
-  '0 0 * * *', // 毎日0時に実行
-  async () => {
-    try {
-      // JEONGさんのユーザーIDを掃除当番として設定
-      await setDailyCleanerAsJeong();
-      console.log('Daily cleaner set as JEONG successfully');
-    } catch (error) {
-      console.error('Error setting daily cleaner:', error);
-    }
-  },
-  null,
-  true,
-  'Asia/Tokyo'
-);
-
 // サーバーの起動処理
 (async () => {
   await app.start(process.env.PORT || 3000);

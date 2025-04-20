@@ -87,8 +87,8 @@
 
 ## 掃除当番について
 
-- 毎日自動的に「@JEONG Seong Cheol 鄭 晟徹」さんが掃除当番として設定されます
-- 変更が必要な場合は `/barista change` コマンドで変更してください
+- 常に「@JEONG Seong Cheol 鄭 晟徹」さんが掃除当番です
+- 変更が必要な場合は `/barista change` コマンドで変更してください（翌日には再びJEONGさんに戻ります）
 
 ### 💡 Tips
 
