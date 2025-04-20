@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { CoffeeMachineState, CleaningSchedule, WeeklySchedule } from '../types';
-import { getDaysOfWeek, getNextWeekDays } from '../utils/scheduleUtils';
+import { getDaysOfWeek, getNextWeekDays, getAllWeekdaysInMonth } from '../utils/scheduleUtils';
 import { format } from 'date-fns';
 import { utcToZonedTime } from 'date-fns-tz';
 
@@ -242,6 +242,60 @@ export const changeCleaningAssignment = async (
     return true;
   } catch (error) {
     console.error('Error in changeCleaningAssignment:', error);
+    return false;
+  }
+};
+
+// 新規追加: 月間の掃除当番を登録する関数
+export const registerCleaningSchedules = async (
+  userIds: string[],
+  yearMonth: string
+): Promise<boolean> => {
+  try {
+    // 指定された月の平日を取得
+    const dates = getAllWeekdaysInMonth(yearMonth);
+    
+    if (userIds.length === 0) {
+      console.error('No users provided for schedule registration');
+      return false;
+    }
+    
+    // 既存のスケジュールを確認して削除
+    const { error: deleteError } = await supabase
+      .from('cleaning_schedule')
+      .delete()
+      .gte('date', `${yearMonth}-01`)
+      .lt('date', `${yearMonth}-32`); // 32は存在しないので月末までカバー
+      
+    if (deleteError) {
+      console.error('Error deleting existing schedules:', deleteError);
+      return false;
+    }
+    
+    // ユーザーを日数分に分配（ラウンドロビン方式）
+    const assignments = [];
+    dates.forEach((date, index) => {
+      const userIndex = index % userIds.length;
+      assignments.push({
+        user_id: userIds[userIndex],
+        date: date,
+        completed: false
+      });
+    });
+    
+    // バッチ挿入
+    const { error } = await supabase
+      .from('cleaning_schedule')
+      .insert(assignments);
+      
+    if (error) {
+      console.error('Error registering cleaning schedules:', error);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error in registerCleaningSchedules:', error);
     return false;
   }
 }; 

@@ -4,33 +4,10 @@ import { utcToZonedTime, zonedTimeToUtc } from 'date-fns-tz';
 import { getWeeklySchedule, getTodayCleaner } from '../db/schema';
 import { formatWeeklySchedule } from './scheduleUtils';
 
+// 定期チェック関数を更新（片付け時間に関する通知を削除）
 export const checkAndNotify = async (say: Function) => {
-  const state = await getCurrentState();
-  if (!state.isRunning) return;
-
-  const now = utcToZonedTime(new Date(), 'Asia/Tokyo');
-  const cleanupTime = parseISO(`${now.toISOString().split('T')[0]}T${state.cleanupTime}:00`);
-  const jstCleanupTime = utcToZonedTime(cleanupTime, 'Asia/Tokyo');
-  
-  const thirtyMinsBefore = addMinutes(jstCleanupTime, -30);
-  const thirtyMinsAfter = addMinutes(jstCleanupTime, 30);
-
-  const nowTime = now.getTime();
-  const targetTime = thirtyMinsBefore.getTime();
-  
-  if (Math.abs(nowTime - targetTime) <= 60000) {
-    await say({
-      channel: process.env.SLACK_CHANNEL_ID,
-      text: `<@${state.startedBy}> あと30分で片付ける時間です`
-    });
-  }
-
-  if (isAfter(now, thirtyMinsAfter)) {
-    await say({
-      channel: process.env.SLACK_CHANNEL_ID,
-      text: `<!here> マシンを片付け忘れています！`
-    });
-  }
+  // 元の30分前通知と片付け忘れ通知はもう不要なので削除
+  // 17時のチェックがapp.tsで実装されているため
 };
 
 // 金曜日に次週のスケジュールを通知する関数

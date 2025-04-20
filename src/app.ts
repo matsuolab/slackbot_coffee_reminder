@@ -8,7 +8,8 @@ import {
   getTodayCleaner, 
   getWeeklySchedule,
   setCleaningCompleted,
-  changeCleaningAssignment 
+  changeCleaningAssignment,
+  registerCleaningSchedules
 } from './db/schema';
 import { CronJob } from 'cron';
 import { 
@@ -51,7 +52,7 @@ app.command('/barista', async ({ command, client, say, ack }) => {
       
       switch (action) {
         case 'on':
-          await handleOnCommand(command.user_id, client, command.trigger_id);
+          await handleOnCommand(command.user_id, client);
           break;
         case 'off':
           await handleOffCommand(command.user_id, client);
@@ -73,6 +74,9 @@ app.command('/barista', async ({ command, client, say, ack }) => {
           const userId = params[1].replace(/[<@>]/g, '');
           const date = params[2];
           await handleChangeCommand(command.user_id, userId, date, client);
+          break;
+        case 'register':
+          await handleRegisterCommand(command.user_id, command.text, client);
           break;
         case 'help':
           await handleHelpCommand(say);
@@ -121,7 +125,7 @@ app.command('/barista', async ({ command, client, say, ack }) => {
   }
 });
 
-const handleOnCommand = async (userId: string, client: any, triggerId: string) => {
+const handleOnCommand = async (userId: string, client: any) => {
   const currentState = await getCurrentState();
   if (currentState.isRunning) {
     await client.chat.postMessage({
@@ -131,122 +135,36 @@ const handleOnCommand = async (userId: string, client: any, triggerId: string) =
     return;
   }
 
-  const currentTime = new Date();
-  const hours = generateHourOptions(currentTime);
-  const minutes = generateMinuteOptions();
-  const defaultHour = getDefaultHour(currentTime);
-
-  if (!hours.includes(15)) {
-    hours.push(15);
-    hours.sort((a, b) => a - b);
+  const now = new Date().toISOString();
+  
+  await updateState({
+    isRunning: true,
+    startedBy: userId,
+    startedAt: now,
+    cleanupTime: null,
+    stoppedBy: null,
+    stoppedAt: null
+  });
+  
+  await logAction('START', userId, null);
+  
+  const todayCleaner = await getTodayCleaner();
+  
+  if (!process.env.SLACK_CHANNEL_ID) {
+    throw new Error('SLACK_CHANNEL_ID is not defined');
   }
-
-  const defaultHourOption = {
-    text: {
-      type: 'plain_text',
-      text: `${defaultHour}時`,
-      emoji: true
-    },
-    value: defaultHour.toString()
-  };
-
-  const defaultMinuteOption = {
-    text: {
-      type: 'plain_text',
-      text: '00分',
-      emoji: true
-    },
-    value: '00'
-  };
-
-  try {
-    // 当日の掃除担当者を取得
-    const todayCleaner = await notifyTodayCleaner(client);
-    
-    await client.views.open({
-      trigger_id: triggerId,
-      view: {
-        type: 'modal',
-        callback_id: 'coffee_time_selection',
-        title: {
-          type: 'plain_text',
-          text: '片付け時間の選択',
-          emoji: true
-        },
-        blocks: [
-          {
-            type: 'section',
-            text: {
-              type: 'mrkdwn',
-              text: '片付ける時間を選択してください：'
-            }
-          },
-          {
-            type: 'actions',
-            block_id: 'time_select_block',
-            elements: [
-              {
-                type: 'static_select',
-                action_id: 'hour_select',
-                placeholder: {
-                  type: 'plain_text',
-                  text: '時間を選択',
-                  emoji: true
-                },
-                options: hours.map(hour => ({
-                  text: {
-                    type: 'plain_text',
-                    text: `${hour}時`,
-                    emoji: true
-                  },
-                  value: hour.toString()
-                })),
-                initial_option: defaultHourOption
-              },
-              {
-                type: 'static_select',
-                action_id: 'minute_select',
-                placeholder: {
-                  type: 'plain_text',
-                  text: '分を選択',
-                  emoji: true
-                },
-                options: minutes.map(minute => ({
-                  text: {
-                    type: 'plain_text',
-                    text: `${minute.toString().padStart(2, '0')}分`,
-                    emoji: true
-                  },
-                  value: minute.toString().padStart(2, '0')
-                })),
-                initial_option: defaultMinuteOption
-              }
-            ]
-          }
-        ],
-        submit: {
-          type: 'plain_text',
-          text: '確定',
-          emoji: true
-        }
-      }
-    });
-    
-    // 掃除担当者がいる場合は通知
-    if (todayCleaner) {
-      const todayDate = format(utcToZonedTime(new Date(), 'Asia/Tokyo'), 'M/d');
-      await client.chat.postMessage({
-        channel: process.env.SLACK_CHANNEL_ID,
-        text: `マシンが開かれました。本日（${todayDate}）の掃除担当は <@${todayCleaner}> さんです。`
-      });
-    }
-  } catch (error) {
-    console.error('Error opening modal:', error);
-    await client.chat.postMessage({
-      channel: userId,
-      text: 'エラーが発生しました。もう一度お試しください。'
-    });
+  
+  let message = `マシンが開けられました! :kami:\n<@${userId}>さんがマシンを開けました。`;
+  
+  if (todayCleaner) {
+    const todayDate = format(utcToZonedTime(new Date(), 'Asia/Tokyo'), 'M/d');
+    message += `\n本日（${todayDate}）の掃除担当は <@${todayCleaner}> さんです。`;
   }
+  
+  await client.chat.postMessage({
+    channel: process.env.SLACK_CHANNEL_ID,
+    text: message
+  });
 };
 
 const handleOffCommand = async (userId: string, client: any) => {
@@ -292,7 +210,7 @@ const handleStatusCommand = async (say: Function) => {
       hour: '2-digit',
       minute: '2-digit'
     });
-    await say(`:coffee_parrot: マシンは起動中です。:coffee_parrot: \n開けた時刻: ${startTime}、しめる時刻: ${currentState.cleanupTime}、開けた人: <@${currentState.startedBy}>さん`);
+    await say(`:coffee_parrot: マシンは起動中です。:coffee_parrot: \n開けた時刻: ${startTime}、開けた人: <@${currentState.startedBy}>さん`);
   } else {
     if (currentState.stoppedAt && currentState.stoppedBy) {
       const stoppedTime = new Date(currentState.stoppedAt).toLocaleTimeString('ja-JP', {
@@ -365,68 +283,95 @@ const handleChangeCommand = async (
   }
 };
 
+const handleRegisterCommand = async (userId: string, commandText: string, client: any) => {
+  try {
+    // 入力解析
+    const parts = commandText.split(' ');
+    
+    if (parts.length < 3) {
+      await client.chat.postMessage({
+        channel: userId,
+        text: '使用方法: /barista register YYYY-MM @user1 @user2 @user3...\n例: /barista register 2024-06 @tanaka @suzuki @yamada'
+      });
+      return;
+    }
+    
+    const yearMonth = parts[1];
+    // 日付形式チェック
+    if (!/^\d{4}-\d{2}$/.test(yearMonth)) {
+      await client.chat.postMessage({
+        channel: userId,
+        text: '年月はYYYY-MM形式で指定してください。例: 2024-06'
+      });
+      return;
+    }
+    
+    // ユーザーID抽出
+    const userIds = parts.slice(2).map(user => user.replace(/[<@>]/g, ''));
+    
+    if (userIds.length === 0) {
+      await client.chat.postMessage({
+        channel: userId,
+        text: '少なくとも1人のユーザーを指定してください。'
+      });
+      return;
+    }
+    
+    // スケジュール登録
+    const success = await registerCleaningSchedules(userIds, yearMonth);
+    
+    if (success) {
+      // フォーマット（例：2024年6月）
+      const [year, month] = yearMonth.split('-');
+      const formattedMonth = `${year}年${parseInt(month)}月`;
+      
+      await client.chat.postMessage({
+        channel: process.env.SLACK_CHANNEL_ID!,
+        text: `${formattedMonth}の掃除当番表を登録しました。\n担当者: ${userIds.map(id => `<@${id}>`).join(', ')}`
+      });
+    } else {
+      await client.chat.postMessage({
+        channel: userId,
+        text: '掃除当番の登録中にエラーが発生しました。もう一度お試しください。'
+      });
+    }
+  } catch (error) {
+    console.error('Error in register command:', error);
+    await client.chat.postMessage({
+      channel: userId,
+      text: 'エラーが発生しました。しばらく待ってから再度お試しください。'
+    });
+  }
+};
+
 const handleHelpCommand = async (say: Function) => {
   await say(`
 コーヒーマシン管理ボットのコマンド一覧:
 
 \`/barista on\` - マシンを開ける + 当日の掃除当番をメンション
-\`/barista off\` - 掃除完了報告
-\`/barista status\` - 現在の状態を確認
+\`/barista off\` - マシンを閉じる + 掃除完了報告
+\`/barista status\` - 現在のマシン状態を確認
 \`/barista schedule\` - 掃除スケジュール確認
 \`/barista change @ユーザー 日付\` - 担当日変更（例: /barista change @user 2024-06-10）
+\`/barista register YYYY-MM @user1 @user2...\` - 月間掃除当番登録
 \`/barista help\` - このヘルプを表示
   `);
 };
 
-// モーダルの送信イベントハンドラ
-app.view('coffee_time_selection', async ({ ack, body, view, client }) => {
-  try {
-    await ack();
-    
-    const userId = body.user.id;
-    const hourValue = view.state.values.time_select_block.hour_select.selected_option.value;
-    const minuteValue = view.state.values.time_select_block.minute_select.selected_option.value;
-    
-    const cleanupTime = `${hourValue}:${minuteValue}`;
-    const now = new Date().toISOString();
-    
-    await updateState({
-      isRunning: true,
-      startedBy: userId,
-      startedAt: now,
-      cleanupTime: cleanupTime,
-      stoppedBy: null,
-      stoppedAt: null
-    });
-    
-    await logAction('START', userId, cleanupTime);
-    
-    if (!process.env.SLACK_CHANNEL_ID) {
-      throw new Error('SLACK_CHANNEL_ID is not defined');
-    }
-    
-    await client.chat.postMessage({
-      channel: process.env.SLACK_CHANNEL_ID,
-      text: `マシンを開けました!:kami: \n<@${userId}>さんが${cleanupTime}までに片付ける予定です。`
-    });
-  } catch (error) {
-    console.error('Error handling modal submit:', error);
-  }
-});
-
 // 通知用のCronジョブ設定
-const checkCron = new CronJob(
-  '*/1 * * * *', // 1分ごとに実行
-  async () => {
-    try {
-      await checkAndNotify(app.client.chat.postMessage);
-    } catch (error) {
-      console.error('Error in checkCron:', error);
-    }
-  },
-  null,
-  true
-);
+// 元のcronを削除し、17時チェックだけにする
+// const checkCron = new CronJob(
+//   '*/1 * * * *', // 1分ごとに実行
+//   async () => {
+//     try {
+//       await checkAndNotify(app.client.chat.postMessage);
+//     } catch (error) {
+//       console.error('Error in checkCron:', error);
+//     }
+//   },
+//   null,
+//   true
+// );
 
 // 金曜日の15時に次週のスケジュール通知用のCronジョブ
 const scheduleCron = new CronJob(
@@ -440,6 +385,29 @@ const scheduleCron = new CronJob(
   },
   null,
   true
+);
+
+// 17時チェック用のCronジョブを追加
+const dailyReminderCron = new CronJob(
+  '0 17 * * *', // 毎日17時に実行
+  async () => {
+    try {
+      const currentState = await getCurrentState();
+      
+      // マシンがまだ開いている場合は通知
+      if (currentState.isRunning) {
+        await app.client.chat.postMessage({
+          channel: process.env.SLACK_CHANNEL_ID!,
+          text: `<!here> マシンがまだ開いています！閉め忘れていませんか？\n<@${currentState.startedBy}>さんが${format(new Date(currentState.startedAt!), 'HH:mm')}に開けました。`
+        });
+      }
+    } catch (error) {
+      console.error('Error in daily reminder cron:', error);
+    }
+  },
+  null,
+  true,
+  'Asia/Tokyo'
 );
 
 // サーバーの起動処理

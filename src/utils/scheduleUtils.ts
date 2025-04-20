@@ -1,4 +1,4 @@
-import { startOfWeek, endOfWeek, format, eachDayOfInterval, addDays } from 'date-fns';
+import { startOfWeek, endOfWeek, format, eachDayOfInterval, addDays, parse, startOfMonth, endOfMonth } from 'date-fns';
 import { utcToZonedTime, zonedTimeToUtc } from 'date-fns-tz';
 import { WeeklySchedule } from '../types';
 
@@ -42,4 +42,22 @@ export const formatWeeklySchedule = (schedule: WeeklySchedule) => {
   });
   
   return formattedText;
+};
+
+// 月内の全平日を取得
+export const getAllWeekdaysInMonth = (yearMonth: string): string[] => {
+  // YYYY-MM形式の入力を受け取る
+  const date = parse(yearMonth, 'yyyy-MM', new Date());
+  const jstDate = utcToZonedTime(date, 'Asia/Tokyo');
+  
+  const start = startOfMonth(jstDate);
+  const end = endOfMonth(jstDate);
+  
+  // 月内の全日を取得し、平日（月-金）のみをフィルタリング
+  return eachDayOfInterval({ start, end })
+    .filter(date => {
+      const day = date.getDay();
+      return day !== 0 && day !== 6; // 日曜(0)と土曜(6)を除外
+    })
+    .map(date => format(date, 'yyyy-MM-dd'));
 }; 
