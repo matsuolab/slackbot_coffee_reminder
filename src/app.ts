@@ -9,7 +9,7 @@ import {
   getWeeklySchedule,
   setCleaningCompleted,
   changeCleaningAssignment,
-  registerCleaningSchedules
+  setDailyCleanerAsJeong
 } from './db/schema';
 import { CronJob } from 'cron';
 import { 
@@ -74,9 +74,6 @@ app.command('/barista', async ({ command, client, say, ack }) => {
           const userId = params[1].replace(/[<@>]/g, '');
           const date = params[2];
           await handleChangeCommand(command.user_id, userId, date, client);
-          break;
-        case 'register':
-          await handleRegisterCommand(command.user_id, command.text, client);
           break;
         case 'help':
           await handleHelpCommand(say);
@@ -283,67 +280,6 @@ const handleChangeCommand = async (
   }
 };
 
-const handleRegisterCommand = async (userId: string, commandText: string, client: any) => {
-  try {
-    // 入力解析
-    const parts = commandText.split(' ');
-    
-    if (parts.length < 3) {
-      await client.chat.postMessage({
-        channel: userId,
-        text: '使用方法: /barista register YYYY-MM @user1 @user2 @user3...\n例: /barista register 2024-06 @tanaka @suzuki @yamada'
-      });
-      return;
-    }
-    
-    const yearMonth = parts[1];
-    // 日付形式チェック
-    if (!/^\d{4}-\d{2}$/.test(yearMonth)) {
-      await client.chat.postMessage({
-        channel: userId,
-        text: '年月はYYYY-MM形式で指定してください。例: 2024-06'
-      });
-      return;
-    }
-    
-    // ユーザーID抽出
-    const userIds = parts.slice(2).map(user => user.replace(/[<@>]/g, ''));
-    
-    if (userIds.length === 0) {
-      await client.chat.postMessage({
-        channel: userId,
-        text: '少なくとも1人のユーザーを指定してください。'
-      });
-      return;
-    }
-    
-    // スケジュール登録
-    const success = await registerCleaningSchedules(userIds, yearMonth);
-    
-    if (success) {
-      // フォーマット（例：2024年6月）
-      const [year, month] = yearMonth.split('-');
-      const formattedMonth = `${year}年${parseInt(month)}月`;
-      
-      await client.chat.postMessage({
-        channel: process.env.SLACK_CHANNEL_ID!,
-        text: `${formattedMonth}の掃除当番表を登録しました。\n担当者: ${userIds.map(id => `<@${id}>`).join(', ')}`
-      });
-    } else {
-      await client.chat.postMessage({
-        channel: userId,
-        text: '掃除当番の登録中にエラーが発生しました。もう一度お試しください。'
-      });
-    }
-  } catch (error) {
-    console.error('Error in register command:', error);
-    await client.chat.postMessage({
-      channel: userId,
-      text: 'エラーが発生しました。しばらく待ってから再度お試しください。'
-    });
-  }
-};
-
 const handleHelpCommand = async (say: Function) => {
   await say(`
 コーヒーマシン管理ボットのコマンド一覧:
@@ -353,7 +289,6 @@ const handleHelpCommand = async (say: Function) => {
 \`/barista status\` - 現在のマシン状態を確認
 \`/barista schedule\` - 掃除スケジュール確認
 \`/barista change @ユーザー 日付\` - 担当日変更（例: /barista change @user 2024-06-10）
-\`/barista register YYYY-MM @user1 @user2...\` - 月間掃除当番登録
 \`/barista help\` - このヘルプを表示
   `);
 };
@@ -403,6 +338,23 @@ const dailyReminderCron = new CronJob(
       }
     } catch (error) {
       console.error('Error in daily reminder cron:', error);
+    }
+  },
+  null,
+  true,
+  'Asia/Tokyo'
+);
+
+// 毎日0時にJEONGさんを掃除当番として設定するジョブを追加
+const dailyCleanerSetupCron = new CronJob(
+  '0 0 * * *', // 毎日0時に実行
+  async () => {
+    try {
+      // JEONGさんのユーザーIDを掃除当番として設定
+      await setDailyCleanerAsJeong();
+      console.log('Daily cleaner set as JEONG successfully');
+    } catch (error) {
+      console.error('Error setting daily cleaner:', error);
     }
   },
   null,
