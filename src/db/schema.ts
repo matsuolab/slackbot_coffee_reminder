@@ -1,5 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
-import { CoffeeMachineState } from '../types';
+import { CoffeeMachineState, CleaningSchedule, WeeklySchedule } from '../types';
+import { getDaysOfWeek, getNextWeekDays } from '../utils/scheduleUtils';
+import { format } from 'date-fns';
+import { utcToZonedTime } from 'date-fns-tz';
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
@@ -103,4 +106,142 @@ export const logAction = async (
     }]);
 
   if (error) throw error;
+};
+
+export const getTodayCleaner = async (): Promise<string | null> => {
+  const today = format(utcToZonedTime(new Date(), 'Asia/Tokyo'), 'yyyy-MM-dd');
+  
+  try {
+    const { data, error } = await supabase
+      .from('cleaning_schedule')
+      .select('user_id')
+      .eq('date', today)
+      .single();
+      
+    if (error) {
+      console.error('Error getting today cleaner:', error);
+      return null;
+    }
+    
+    return data?.user_id || null;
+  } catch (error) {
+    console.error('Error in getTodayCleaner:', error);
+    return null;
+  }
+};
+
+export const getWeeklySchedule = async (useNextWeek = false): Promise<WeeklySchedule> => {
+  const dates = useNextWeek ? getNextWeekDays() : getDaysOfWeek();
+  
+  try {
+    const { data, error } = await supabase
+      .from('cleaning_schedule')
+      .select('*')
+      .in('date', dates);
+      
+    if (error) throw error;
+    
+    const schedule: WeeklySchedule = {};
+    
+    // 全ての平日を追加（データがない場合も空で表示するため）
+    dates.forEach(date => {
+      schedule[date] = {
+        date,
+        userId: '未設定',
+        completed: false
+      };
+    });
+    
+    // 実際のデータで上書き
+    data?.forEach(item => {
+      const dateStr = item.date;
+      schedule[dateStr] = {
+        date: dateStr,
+        userId: item.user_id,
+        completed: item.completed || false
+      };
+    });
+    
+    return schedule;
+  } catch (error) {
+    console.error('Error in getWeeklySchedule:', error);
+    return {};
+  }
+};
+
+export const setCleaningCompleted = async (userId: string): Promise<boolean> => {
+  const today = format(utcToZonedTime(new Date(), 'Asia/Tokyo'), 'yyyy-MM-dd');
+  const now = new Date().toISOString();
+  
+  try {
+    const { error } = await supabase
+      .from('cleaning_schedule')
+      .update({
+        completed: true,
+        completed_at: now,
+        completed_by: userId
+      })
+      .eq('date', today);
+      
+    if (error) {
+      console.error('Error setting cleaning completed:', error);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error in setCleaningCompleted:', error);
+    return false;
+  }
+};
+
+export const changeCleaningAssignment = async (
+  newUserId: string,
+  dateStr: string
+): Promise<boolean> => {
+  try {
+    // 既存の割り当てを確認
+    const { data: existingData, error: checkError } = await supabase
+      .from('cleaning_schedule')
+      .select('*')
+      .eq('date', dateStr)
+      .single();
+      
+    if (checkError && checkError.code !== 'PGRST116') { // PGRST116はデータがない場合のエラー
+      console.error('Error checking existing assignment:', checkError);
+      return false;
+    }
+    
+    if (existingData) {
+      // 既存データを更新
+      const { error } = await supabase
+        .from('cleaning_schedule')
+        .update({ user_id: newUserId })
+        .eq('date', dateStr);
+        
+      if (error) {
+        console.error('Error updating assignment:', error);
+        return false;
+      }
+    } else {
+      // 新規データを作成
+      const { error } = await supabase
+        .from('cleaning_schedule')
+        .insert([{
+          user_id: newUserId,
+          date: dateStr,
+          completed: false
+        }]);
+        
+      if (error) {
+        console.error('Error creating assignment:', error);
+        return false;
+      }
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error in changeCleaningAssignment:', error);
+    return false;
+  }
 }; 

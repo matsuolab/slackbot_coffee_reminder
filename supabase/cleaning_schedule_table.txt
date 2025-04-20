@@ -1,0 +1,10 @@
+-- シフトテーブル（新規）
+CREATE TABLE cleaning_schedule (
+  id SERIAL PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  date DATE NOT NULL,
+  completed BOOLEAN DEFAULT FALSE,
+  completed_at TIMESTAMP WITH TIME ZONE,
+  completed_by TEXT,
+  UNIQUE(date)
+); 
